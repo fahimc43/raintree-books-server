@@ -8,14 +8,10 @@ require("dotenv").config();
 
 const port = process.env.PORT || 5050;
 
-// raintreeadmin
-// 6MilngEDZaFpMA7P
-
 app.use(cors());
 app.use(bodyParser.json());
 
-const uri =
-  "mongodb+srv://raintreeadmin:6MilngEDZaFpMA7P@cluster0.8l38tqf.mongodb.net/?retryWrites=true&w=majority";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.8l38tqf.mongodb.net/?retryWrites=true&w=majority`;
 
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
