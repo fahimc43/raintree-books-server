@@ -1,69 +1,82 @@
-const express = require('express');
+const express = require("express");
+const { MongoClient, ServerApiVersion } = require("mongodb");
 const app = express();
-const MongoClient = require('mongodb').MongoClient;
-const ObjectId = require('mongodb').ObjectId;
-const cors = require('cors');
-var bodyParser = require('body-parser');
-require('dotenv').config()
-
+const ObjectId = require("mongodb").ObjectId;
+const cors = require("cors");
+var bodyParser = require("body-parser");
+require("dotenv").config();
 
 const port = process.env.PORT || 5050;
+
+// raintreeadmin
+// 6MilngEDZaFpMA7P
 
 app.use(cors());
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+const uri =
+  "mongodb+srv://raintreeadmin:6MilngEDZaFpMA7P@cluster0.8l38tqf.mongodb.net/?retryWrites=true&w=majority";
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6zppx.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
-client.connect(err => {
-  const bookCollection = client.db("raintreeBooks").collection("books");
-  const orderCollection = client.db("raintreeBooks").collection("orders");
-
-  app.get('/books', (req, res) => {
-    bookCollection.find()
-      .toArray((err, items) => {
-        res.send(items)
-      })
-  })
-
-  app.get('/book/:id', (req, res) => {
-    bookCollection.find({ _id: ObjectId(req.params.id) })
-      .toArray((err, documents) => {
-        res.send(documents[0]);
-      })
-  })
-
-  app.post('/addBook', (req, res) => {
-    const newBook = req.body;
-    bookCollection.insertOne(newBook)
-      .then(result => {
-        console.log('inserted count', result.insertedCount);
-        res.send(result.insertedCount > 0)
-      })
-  })
-
-  app.post('/addOrders', (req, res) => {
-    const newOrder = req.body;
-    orderCollection.insertOne(newOrder)
-      .then(result => {
-        res.send(result.insertedCount > 0);
-      })
-  })
-
-  app.get('/orders', (req, res) => {
-    orderCollection.find({ email: req.query.email })
-      .toArray((err, documents) => {
-        res.send(documents);
-      })
-  })
-
-  //   client.close();
+const client = new MongoClient(uri, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverApi: ServerApiVersion,
 });
 
+async function run() {
+  try {
+    await client.connect();
+    const bookCollection = client.db("raintreeBooks").collection("books");
+    const orderCollection = client.db("raintreeBooks").collection("orders");
+
+    //Get all books item
+    app.get("/books", async (req, res) => {
+      const query = {};
+      const books = await bookCollection.find(query).toArray();
+      res.send(books);
+    });
+
+    //Ordered book save database
+    app.post("/ordered-book", async (req, res) => {
+      const order = req.body;
+      const query = {
+        bookName: order.bookName,
+        authorName: order.authorName,
+      };
+
+      const exists = await orderCollection.findOne(query);
+      const updateDoc = {
+        $set: {
+          quantity: exists?.quantity + 1,
+          sum: (exists?.quantity + 1) * order.sum,
+        },
+      };
+      if (exists) {
+        const update = await orderCollection.updateOne(query, updateDoc);
+        return res.send({ add: true, exists: exists, update });
+      }
+      const result = await orderCollection.insertOne(order);
+      res.send({ success: true, result });
+    });
+
+    // Get All ordered books
+    app.get("/orders", async (req, res) => {
+      const query = {};
+      const books = await orderCollection.find(query).toArray();
+      res.send(books);
+    });
+
+    console.log("database connected");
+  } finally {
+  }
+}
+
+run().catch(console.dir);
+
+app.get("/", (req, res) => {
+  res.send("Hello Rain Tree Books!");
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+  console.log(`Example app listening on port ${port}`);
+});
