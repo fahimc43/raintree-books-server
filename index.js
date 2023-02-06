@@ -40,6 +40,7 @@ async function run() {
       };
 
       const exists = await orderCollection.findOne(query);
+
       const updateDoc = {
         $set: {
           quantity: exists?.quantity + 1,
